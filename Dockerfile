@@ -6,6 +6,7 @@ WORKDIR /app
 
 ENV RABBITHOST localhost
 ENV RABBITPORT 5672
+ENV YOUR_API_KEY 
 
 RUN pip install -r requirements.txt
 
