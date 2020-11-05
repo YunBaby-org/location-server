@@ -18,17 +18,16 @@ def callback(ch, method, properties, body):
     threading.Thread(target=getGEO, args=(method, body)).start()
 
 def toNext(routing_key, exchange_info):
-    print('--- start 2 ---')
+    print('--- Next ---')
     connection1 = pika.BlockingConnection(pika.ConnectionParameters(host=os.getenv('RABBITHOST'), port=os.getenv('RABBITPORT')))
     channel1 = connection1.channel()
     channel1.exchange_declare(exchange='tracker-event', exchange_type='topic')
     routing_key_P = 'tracker.' + routing_key + '.event.respond.' + exchange_info['Response']
     channel1.basic_publish(exchange='tracker-event', routing_key=routing_key_P, body=str(exchange_info))
     connection1.close()
-    print('--- end 2 ---')
 
 def getGEO(method, body):
-    print('--- start 1 ---')
+    print('--- get GEO ---')
     exchange_info = json.loads(body)
     wifi_info = dict()
     wifi_info['wifiAccessPoints'] = exchange_info['Result']['Wifis']
@@ -48,7 +47,6 @@ def getGEO(method, body):
         exchange_info["Result"]["message"] = result['error']['message']
 
     toNext(method.routing_key, exchange_info)
-    print('--- end 1 ---')
 
 channel.basic_consume(queue='monitor.locating-server', auto_ack=True, on_message_callback=callback)
 
