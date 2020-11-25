@@ -5,23 +5,16 @@ load_dotenv(find_dotenv())
 
 GEO_URL = 'https://www.googleapis.com/geolocation/v1/geolocate?key={}'.format(os.getenv('YOUR_API_KEY'))
 
-connection = pika.BlockingConnection(pika.ConnectionParameters(host=os.getenv('RABBITHOST'), port=os.getenv('RABBITPORT')))
-channel = connection.channel()
-
-
 
 def callback(ch, method, properties, body):
     threading.Thread(target=getGEO, args=(method, body)).start()
 
 def toNext(routing_key, exchange_info):
-
-    connection1 = pika.BlockingConnection(pika.ConnectionParameters(host=os.getenv('RABBITHOST'), port=os.getenv('RABBITPORT')))
-    channel1 = connection1.channel()
-
+    global channel
     routing_key_P = 'tracker.' + routing_key + '.event.respond.' + exchange_info['Response']
-    channel1.basic_publish(exchange='tracker-event', routing_key=routing_key_P, body=str(exchange_info))
-    logging.info('send API result')
-    connection1.close()
+    channel.basic_publish(exchange='tracker-event', routing_key=routing_key_P, body=str(exchange_info))
+    logging.info('transfer result to tracker-event & RK: '+str(routing_key_P))
+
 
 def getGEO(method, body):
 
@@ -44,11 +37,21 @@ def getGEO(method, body):
         exchange_info['Result']['errors'] = result['error']['errors']
         exchange_info['Result']['code'] = result['error']['code']
         exchange_info["Result"]["message"] = result['error']['message']
-  
+    logging.info('---------------------------------')
     logging.info(exchange_info)
     toNext(method.routing_key, exchange_info)
 
-logging.getLogger().setLevel(logging.INFO)
-channel.basic_consume(queue='monitor.locating-server', auto_ack=True, on_message_callback=callback)
-logging.info('Location Server Start Consume Message')
-channel.start_consuming()
+
+
+if __name__ == '__main__':
+    #   init coneection 
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=os.getenv('RABBITHOST'), port=os.getenv('RABBITPORT')))
+    channel = connection.channel()
+
+    logging.getLogger().setLevel(logging.INFO)
+
+    channel.basic_consume(queue='monitor.locating-server', auto_ack=True, on_message_callback=callback)
+    logging.info('Location Server Start Consume Message')
+
+    #   start consuming 
+    channel.start_consuming()
