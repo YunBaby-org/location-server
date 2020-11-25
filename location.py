@@ -8,11 +8,7 @@ GEO_URL = 'https://www.googleapis.com/geolocation/v1/geolocate?key={}'.format(os
 connection = pika.BlockingConnection(pika.ConnectionParameters(host=os.getenv('RABBITHOST'), port=os.getenv('RABBITPORT')))
 channel = connection.channel()
 
-channel.exchange_declare(exchange='locating-server', exchange_type='topic')
 
-channel.queue_declare("monitor.locating-server")
-
-channel.queue_bind(exchange='locating-server', queue='monitor.locating-server', routing_key='#')
 
 def callback(ch, method, properties, body):
     threading.Thread(target=getGEO, args=(method, body)).start()
@@ -21,14 +17,16 @@ def toNext(routing_key, exchange_info):
     print('--- Next ---')
     connection1 = pika.BlockingConnection(pika.ConnectionParameters(host=os.getenv('RABBITHOST'), port=os.getenv('RABBITPORT')))
     channel1 = connection1.channel()
-    channel1.exchange_declare(exchange='tracker-event', exchange_type='topic')
+
     routing_key_P = 'tracker.' + routing_key + '.event.respond.' + exchange_info['Response']
     channel1.basic_publish(exchange='tracker-event', routing_key=routing_key_P, body=str(exchange_info))
     connection1.close()
 
 def getGEO(method, body):
     print('--- get GEO ---')
+    
     exchange_info = json.loads(body)
+    
     wifi_info = dict()
     wifi_info['wifiAccessPoints'] = exchange_info['Result']['Wifis']
 
