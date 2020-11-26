@@ -12,21 +12,24 @@ def callback(ch, method, properties, body):
 def toNext(routing_key, exchange_info):
     global channel
     routing_key_P = 'tracker.' + routing_key + '.event.respond.' + exchange_info['Response']
-    channel.basic_publish(exchange='tracker-event', routing_key=routing_key_P, body=str(exchange_info))
+
+    #   publish message is JSON format not str
+    channel.basic_publish(exchange='tracker-event', routing_key=routing_key_P, body=json.dumps(exchange_info))
     logging.info('transfer result to tracker-event & RK: '+str(routing_key_P))
+    logging.info(exchange_info)
 
 
 def getGEO(method, body):
 
     
     exchange_info = json.loads(body)
-    
+  
     wifi_info = dict()
     wifi_info['wifiAccessPoints'] = exchange_info['Result']['Wifis']
 
     response = requests.post(GEO_URL, json=wifi_info)
     result = json.loads(response.text) # str -> dict
-
+    
     if result.get('location'):
         exchange_info['Response'] = 'ScanWifiSignal_Resolved'
         exchange_info['Result']['Longitude'] = result['location']['lng']
@@ -38,8 +41,8 @@ def getGEO(method, body):
         exchange_info['Result']['code'] = result['error']['code']
         exchange_info["Result"]["message"] = result['error']['message']
     logging.info('---------------------------------')
-    logging.info(exchange_info)
-    toNext(method.routing_key, exchange_info)
+    
+    toNext(method.routing_key,exchange_info)
 
 
 
@@ -51,7 +54,7 @@ if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
 
     channel.basic_consume(queue='monitor.locating-server', auto_ack=True, on_message_callback=callback)
-    logging.info('Location Server Start Consume Message')
+    logging.info('--------Location Server Start Consume Message--------')
 
     #   start consuming 
     channel.start_consuming()
