@@ -12,7 +12,7 @@ def callback(ch, method, properties, body):
 def toNext(routing_key, exchange_info):
     global channel
     routing_key_P = 'tracker.' + routing_key + '.event.respond.' + exchange_info['Response']
-
+    
     #   publish message is JSON format not str
     channel.basic_publish(exchange='tracker-event', routing_key=routing_key_P, body=json.dumps(exchange_info))
     logging.info('transfer result to tracker-event & RK: '+str(routing_key_P))
@@ -27,9 +27,10 @@ def getGEO(method, body):
     wifi_info = dict()
     wifi_info['wifiAccessPoints'] = exchange_info['Result']['Wifis']
 
-    response = requests.post(GEO_URL, json=wifi_info)
-    result = json.loads(response.text) # str -> dict
     
+    response = requests.post(GEO_URL, data=json.dumps(wifi_info))
+    result = json.loads(response.text) # str -> dict
+    logging.info('geolocation result ',result['location'])
     if result.get('location'):
         exchange_info['Response'] = 'ScanWifiSignal_Resolved'
         exchange_info['Result']['Longitude'] = result['location']['lng']
