@@ -7,8 +7,8 @@ GEO_URL = 'https://www.googleapis.com/geolocation/v1/geolocate?key={}'.format(os
 
 
 def callback(ch, method, properties, body):
-    threading.Thread(target=getGEO, args=(method, body)).start()
-
+    #threading.Thread(target=getGEO, args=(method, body)).start()
+    getGEO(method,body)
 def toNext(routing_key, exchange_info):
     global channel
     routing_key_P = 'tracker.' + routing_key + '.event.respond.' + exchange_info['Response']
@@ -16,7 +16,6 @@ def toNext(routing_key, exchange_info):
     #   publish message is JSON format not str
     channel.basic_publish(exchange='tracker-event', routing_key=routing_key_P, body=json.dumps(exchange_info))
     logging.info('transfer result to tracker-event & RK: '+str(routing_key_P))
-    logging.info(exchange_info)
 
 
 def getGEO(method, body):
@@ -30,7 +29,8 @@ def getGEO(method, body):
     
     response = requests.post(GEO_URL, data=json.dumps(wifi_info))
     result = json.loads(response.text) # str -> dict
-    logging.info('geolocation result ',result['location'])
+    logging.info('geolocation result ')
+    logging.info(result)
     if result.get('location'):
         exchange_info['Response'] = 'ScanWifiSignal_Resolved'
         exchange_info['Result']['Longitude'] = result['location']['lng']
